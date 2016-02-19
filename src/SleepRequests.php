@@ -16,7 +16,7 @@ class SleepRequests {
             {
                 $head[] = $v;
                 if( preg_match( "#HTTP/[0-9\.]+\s+([0-9]+)#",$v, $out ) )
-                    $head['reponse_code'] = intval($out[1]);
+                    $head['response_code'] = intval($out[1]);
             }
         }
         return $head;
@@ -37,16 +37,16 @@ class SleepRequests {
             $result = @file_get_contents($url, false, $context);
             $headers = $this->parseHeaders($http_response_header);
             $response_json = json_decode($result, true);
-            if ($sleep_if_throttled && $headers['reponse_code'] == 429
+            if ($sleep_if_throttled && $headers['response_code'] == 429
                     && strpos($response_json['detail'], 'seconds')) {
                 $seconds = preg_match('/available in (\d+) seconds/', $response_json['detail'], $matches);
                 sleep($matches[1]);
                 continue;
-            } else if ($sleep_if_throttled && $headers['reponse_code'] == 429
+            } else if ($sleep_if_throttled && $headers['response_code'] == 429
                     && strpos($response_json['detail'], 'Too many concurrent requests')) {
                 sleep(2);
                 continue;
-            } else if ($headers['reponse_code'] != 200) {
+            } else if ($headers['response_code'] != 200) {
                 throw new MonkeyLearnException($response_json['detail']);
             }
             return array($response_json, $headers);
