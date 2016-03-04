@@ -4,6 +4,7 @@ namespace MonkeyLearn;
 use MonkeyLearn\Config;
 use MonkeyLearn\MonkeyLearnResponse;
 use MonkeyLearn\HandleErrors;
+use MonkeyLearn\MonkeyLearnException;
 
 class Classification extends SleepRequests {
     function __construct($token, $base_endpoint) {
@@ -33,7 +34,7 @@ class Classification extends SleepRequests {
         return new MonkeyLearnResponse($res, $headers);
     }
 
-    function list($sleep_if_throttled=true) {
+    function list_classifiers($sleep_if_throttled=true) {
         $url = $this->endpoint;
         list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
         return new MonkeyLearnResponse($response['result'], array($header));
@@ -48,8 +49,23 @@ class Classification extends SleepRequests {
     function upload_samples($module_id, $samples_with_categories, $sleep_if_throttled=true) {
         $url = $this->endpoint.$module_id.'/samples/';
         $data_samples = array();
-        foreach($samples_with_categories as $sc) {
-            $data_samples[] = array('text' => $sc[0], 'category_id' => $sc[1]);
+        foreach($samples_with_categories as $i => $sc) {
+            if (is_int($sc[1]) || (is_array($sc[1]) && $sc[1] == array_filter($sc[1], 'is_int'))) {
+                $sample = array('text' => $sc[0], 'category_id' => $sc[1]);
+            } else if (is_string($sc[1]) || (is_array($sc[1]) && $sc[1] == array_filter($sc[1], 'is_string'))) {
+                $sample = array('text' => $sc[0], 'category_path' => $sc[1]);
+            } else  if (is_null($sc[1])){
+                $sample = array('text' => $sc[0]);
+            } else {
+                throw new MonkeyLearnException(
+                    "Invalid category value in sample $i"
+                );
+            }
+
+            if (count($sc) > 2 && $sc[2] && (is_string($sc[2]) || (is_array($sc[2]) && $sc[2] == array_filter($sc[2], 'is_string')))) {
+                $sample['tag'] = $sc[2];
+            }
+            $data_samples[] = $sample;
         }
         $data = array('samples' => $data_samples);
         list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
