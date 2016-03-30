@@ -26,7 +26,8 @@ class SleepRequests {
         $options = array(
             'http' => array(
                 'header'  => "Content-type: application/json\r\n".
-                    "Authorization:token $this->token\r\n",
+                    "Authorization:token $this->token\r\n".
+                    "User-Agent: php-sdk\r\n",
                 'method'  => $method,
                 'content' => json_encode($data),
                 'ignore_errors' => true, // don't fail file_get_contents with status code 429
