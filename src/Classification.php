@@ -13,9 +13,9 @@ class Classification extends SleepRequests {
         $this->categories = new Categories($token, $base_endpoint);
     }
 
-    function classify($module_id, $text_list, $sandbox=false,
+    function classify($module_id, $sample_list, $sandbox=false,
                       $batch_size=Config::DEFAULT_BATCH_SIZE, $sleep_if_throttled=true) {
-        HandleErrors::check_batch_limits($text_list, $batch_size);
+        HandleErrors::check_batch_limits($sample_list, $batch_size);
         $url = $this->endpoint.$module_id.'/classify/';
         if ($sandbox) {
             $url .= '?sandbox=1';
@@ -23,9 +23,14 @@ class Classification extends SleepRequests {
 
         $res = array();
         $headers = array();
-        $batches = array_chunk($text_list, $batch_size);
+        $batches = array_chunk($sample_list, $batch_size);
         foreach($batches as $batch) {
-            $data = array('text_list' => $batch);
+            if (is_array($batch[0])) {
+                $data = array('sample_list' => $batch);
+            } else {
+                $data = array('text_list' => $batch);
+            }
+
             list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
             $headers[] = $header;
             $res = array_merge($res, $response['result']);
@@ -46,17 +51,22 @@ class Classification extends SleepRequests {
         return new MonkeyLearnResponse($response['result'], array($header));
     }
 
-    function upload_samples($module_id, $samples_with_categories, $sleep_if_throttled=true) {
+    function upload_samples($module_id, $samples_with_categories, $sleep_if_throttled=true,
+                            $features_schema=null) {
         $url = $this->endpoint.$module_id.'/samples/';
         $data_samples = array();
         foreach($samples_with_categories as $i => $sc) {
-            if (is_int($sc[1]) || (is_array($sc[1]) && $sc[1] == array_filter($sc[1], 'is_int'))) {
-                $sample = array('text' => $sc[0], 'category_id' => $sc[1]);
-            } else if (is_string($sc[1]) || (is_array($sc[1]) && $sc[1] == array_filter($sc[1], 'is_string'))) {
-                $sample = array('text' => $sc[0], 'category_path' => $sc[1]);
-            } else  if (is_null($sc[1])){
-                $sample = array('text' => $sc[0]);
+            if (is_array($sc[0])) {
+                $sample = array("features" => $sc[0]);
             } else {
+                $sample = array("text" => $sc[0]);
+            }
+
+            if (is_int($sc[1]) || (is_array($sc[1]) && $sc[1] == array_filter($sc[1], 'is_int'))) {
+                $sample['category_id'] = $sc[1];
+            } else if (is_string($sc[1]) || (is_array($sc[1]) && $sc[1] == array_filter($sc[1], 'is_string'))) {
+                $sample['category_path'] = $sc[1];
+            } else if (!is_null($sc[1])){
                 throw new MonkeyLearnException(
                     "Invalid category value in sample $i"
                 );
@@ -68,6 +78,10 @@ class Classification extends SleepRequests {
             $data_samples[] = $sample;
         }
         $data = array('samples' => $data_samples);
+        if ($features_schema) {
+            $data['features_schema'] = $features_schema;
+        }
+
         list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
         return new MonkeyLearnResponse($response['result'], array($header));
     }
