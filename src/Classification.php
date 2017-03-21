@@ -148,6 +148,12 @@ class Categories extends SleepRequests {
         $this->endpoint = $base_endpoint.'classifiers/';
     }
 
+    function detail($module_id, $category_id, $sleep_if_throttled=true) {
+        $url = $this->endpoint.$module_id.'/categories/'.$category_id.'/';
+        list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response['result'], array($header));
+    }
+
     function create($module_id, $name, $parent_id, $sleep_if_throttled=true) {
 
         $data = array(
