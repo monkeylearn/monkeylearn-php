@@ -26,7 +26,9 @@ class Classification extends SleepRequests {
             $data_dict['production_model'] = $production_model;
             try {
                 list($response, $header) = $this->make_request($url, 'POST', $data_dict, $sleep_if_throttled);
-            } catch (\MonkeyLearnException $mle){ throw $mle;}
+            } catch (\MonkeyLearnException $mle){
+                throw $mle;
+            }
             $headers[] = $header;
             $res = array_merge($res, $response);
         }
@@ -39,38 +41,62 @@ class Classification extends SleepRequests {
             array('page' => $page, 'per_page' => $per_page, 'order_by' => $order_by)
         );
         $url = $this->endpoint.'?'.$query_params;
-        list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
+        try {
+            list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
+        } catch (\MonkeyLearnException $mle){
+            throw $mle;
+        }
         return new MonkeyLearnResponse($response, array($header));
     }
 
     function detail($model_id, $sleep_if_throttled=true) {
         $url = $this->endpoint.$model_id.'/';
-        list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
+        try {
+            list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
+        } catch (\MonkeyLearnException $mle){
+            throw $mle;
+        }
         return new MonkeyLearnResponse($response, array($header));
     }
 
     function upload_data($model_id, $data, $sleep_if_throttled=true) {
         $url = $this->endpoint.$model_id.'/data/';
         $data = array('data' => $data);
-        list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
+        try {
+            list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
+        } catch (\MonkeyLearnException $mle){
+            throw $mle;
+        }
         return new MonkeyLearnResponse($response, array($header));
     }
 
     function train($model_id, $sleep_if_throttled=true) {
         $url = $this->endpoint.$model_id.'/train/';
-        list($response, $header) = $this->make_request($url, 'POST', null, $sleep_if_throttled);
+        try {
+            list($response, $header) = $this->make_request($url, 'POST', null, $sleep_if_throttled);
+        } catch (\MonkeyLearnException $mle){
+            throw $mle;
+        }
         return new MonkeyLearnResponse($response, array($header));
     }
 
     function deploy($model_id, $sleep_if_throttled=true) {
         $url = $this->endpoint.$model_id.'/deploy/';
-        list($response, $header) = $this->make_request($url, 'POST', null, $sleep_if_throttled);
+        try {
+            list($response, $header) = $this->make_request($url, 'POST', null, $sleep_if_throttled);
+        } catch (\MonkeyLearnException $mle){
+            throw $mle;
+        }
         return new MonkeyLearnResponse($response, array($header));
     }
 
     function delete($model_id, $sleep_if_throttled=true) {
         $url = $this->endpoint.$model_id.'/';
-        list($response, $header) = $this->make_request($url, 'DELETE', null, $sleep_if_throttled);
+        try {
+            list($response, $header) = $this->make_request($url, 'DELETE', null, $sleep_if_throttled);
+        } catch (\MonkeyLearnException $mle){
+            throw $mle;
+        }
         return new MonkeyLearnResponse($response, array($header));
     }
 
@@ -102,7 +128,11 @@ class Classification extends SleepRequests {
         }
 
         $url = $this->endpoint;
-        list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
+        try {
+            list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
+        } catch (\MonkeyLearnException $mle){
+            throw $mle;
+        }
         return new MonkeyLearnResponse($response, array($header));
     }
 
@@ -134,7 +164,11 @@ class Classification extends SleepRequests {
         }
 
         $url = $this->endpoint.$model_id.'/';
-        list($response, $header) = $this->make_request($url, 'PATCH', $data, $sleep_if_throttled);
+        try {
+            list($response, $header) = $this->make_request($url, 'PATCH', $data, $sleep_if_throttled);
+        } catch (\MonkeyLearnException $mle){
+            throw $mle;
+        }
         return new MonkeyLearnResponse($response, array($header));
     }
 }
@@ -147,7 +181,11 @@ class Tags extends SleepRequests {
 
     function detail($model_id, $tag_id, $sleep_if_throttled=true) {
         $url = $this->endpoint.$model_id.'/tags/'.$tag_id.'/';
-        list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
+        try {
+            list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
+        } catch (\MonkeyLearnException $mle){
+            throw $mle;
+        }
         return new MonkeyLearnResponse($response, array($header));
     }
 
@@ -166,7 +204,11 @@ class Tags extends SleepRequests {
         }
 
         $url = $this->endpoint.$model_id.'/tags/';
-        list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
+        try {
+            list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
+        } catch (\MonkeyLearnException $mle){
+            throw $mle;
+        }
         return new MonkeyLearnResponse($response, array($header));
     }
 
@@ -185,7 +227,11 @@ class Tags extends SleepRequests {
         }
 
         $url = $this->endpoint.$model_id.'/tags/'.$tag_id.'/';
-        list($response, $header) = $this->make_request($url, 'PATCH', $data, $sleep_if_throttled);
+        try {
+            list($response, $header) = $this->make_request($url, 'PATCH', $data, $sleep_if_throttled);
+        } catch (\MonkeyLearnException $mle){
+            throw $mle;
+        }
         return new MonkeyLearnResponse($response, array($header));
     }
 
@@ -202,7 +248,11 @@ class Tags extends SleepRequests {
         }
 
         $url = $this->endpoint.$model_id.'/tags/'.$tag_id.'/';
-        list($response, $header) = $this->make_request($url, 'DELETE', $data, $sleep_if_throttled);
+        try {
+            list($response, $header) = $this->make_request($url, 'DELETE', $data, $sleep_if_throttled);
+        } catch (\MonkeyLearnException $mle){
+            throw $mle;
+        }
         return new MonkeyLearnResponse($response, array($header));
     }
 }
