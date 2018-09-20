@@ -38,19 +38,20 @@ class SleepRequests {
             $result = @file_get_contents($url, false, $context);
             $headers = $this->parseHeaders($http_response_header);
             $response_json = json_decode($result, true);
-            if ($sleep_if_throttled && $headers['response_code'] == 429
-                    && strpos($response_json['detail'], 'seconds')) {
-                $seconds = preg_match('/available in (\d+) seconds/', $response_json['detail'], $matches);
-                sleep($matches[1]);
-                continue;
-            } else if ($sleep_if_throttled && $headers['response_code'] == 429
-                    && strpos($response_json['detail'], 'Too many concurrent requests')) {
-                sleep(2);
-                continue;
+            if ($sleep_if_throttled && $headers['response_code'] == 429) {
+                $error_code = $response_json['error_code'];
+                if ($error_code == 'PLAN_RATE_LIMIT' || $error_code == 'CONCURRENCY_RATE_LIMIT') {
+                    $seconds_to_wait = $response_json['seconds_to_wait'];
+                    if (!$seconds_to_wait) {
+                        $seconds_to_wait = 2;
+                    }
+                    sleep($seconds_to_wait);
+                }
             } else if ($headers['response_code'] != 200) {
                 throw new MonkeyLearnException($response_json['detail']);
+            } else {
+                return array($response_json, $headers);
             }
-            return array($response_json, $headers);
         }
     }
 }

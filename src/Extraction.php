@@ -11,19 +11,42 @@ class Extraction extends SleepRequests {
         $this->endpoint = $base_endpoint.'extractors/';
     }
 
-    function extract($module_id, $text_list,
+    function detail($model_id, $sleep_if_throttled=true) {
+        $url = $this->endpoint.$model_id.'/';
+        list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
+    }
+
+    function list($page=null, $per_page=null, $order_by=null, $sleep_if_throttled=true) {
+        $query_params = http_build_query(
+            array('page' => $page, 'per_page' => $per_page, 'order_by' => $order_by)
+        );
+        $url = $this->endpoint.'?'.$query_params;
+        list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
+    }
+
+    function extract($model_id, $data, $production_model=false, $extra_args=null,
                       $batch_size=Config::DEFAULT_BATCH_SIZE, $sleep_if_throttled=true) {
-        HandleErrors::check_batch_limits($text_list, $batch_size);
-        $url = $this->endpoint.$module_id.'/extract/';
+        HandleErrors::check_batch_limits($data, $batch_size);
+        $url = $this->endpoint.$model_id.'/extract/';
+
+        if (!$extra_args) {
+            $extra_args = array();
+        }
 
         $res = array();
         $headers = array();
-        $batches = array_chunk($text_list, $batch_size);
+        $batches = array_chunk($data, $batch_size);
         foreach($batches as $batch) {
-            $data = array('text_list' => $batch);
-            list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
+            $data_dict = array('data' => $batch);
+            $data_dict['production_model'] = $production_model;
+            foreach($extra_args as $key => $val) {
+                $data_dict[$key] = $val;
+            }
+            list($response, $header) = $this->make_request($url, 'POST', $data_dict, $sleep_if_throttled);
             $headers[] = $header;
-            $res = array_merge($res, $response['result']);
+            $res = array_merge($res, $response);
         }
 
         return new MonkeyLearnResponse($res, $headers);

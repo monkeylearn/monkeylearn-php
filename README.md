@@ -27,7 +27,7 @@ Now we can use autoloader from Composer by:
 Or, if you don't want to use composer, clone the code and include this line of code:
 
     require 'autoload.php';
-    
+
 
 Usage examples
 --------------
@@ -43,39 +43,34 @@ $ml = new MonkeyLearn\Client('<YOUR API KEY HERE>');
 $res = $ml->classifiers->create('Test Classifier');
 
 // Get the id of the new module
-$module_id = $res->result['classifier']['hashed_id'];
+$model_id = $res->result['id'];
 
-// Get the id of the root node
-$res = $ml->classifiers->detail($module_id);
-$root_id = $res->result['sandbox_categories'][0]['id'];
+// Get the classifier detail
+$res = $ml->classifiers->detail($model_id);
 
-// Create two new categories on the root node
-$res = $ml->classifiers->categories->create($module_id, 'Negative', $root_id);
-$negative_id = $res->result['category']['id'];
-$res = $ml->classifiers->categories->create($module_id, 'Positive', $root_id);
-$positive_id = $res->result['category']['id'];
+// Create two new tags on the classifier
+$res = $ml->classifiers->tags->create($model_id, 'Negative');
+$negative_id = $res->result['id'];
+$res = $ml->classifiers->tags->create($model_id, 'Positive');
+$positive_id = $res->result['id'];
 
-// Now let's upload some samples
-$samples = array(
-    array('The movie was terrible, I hated it.', $negative_id), 
-    array('I love this movie, I want to watch it again!', $positive_id)
+// Now let's upload some data
+$data = array(
+    array('text' => 'The movie was terrible, I hated it.', 'tags' => [$negative_id]),
+    array('text' => 'I love this movie, I want to watch it again!', 'tags' => [$positive_id])
 );
-$res = $ml->classifiers->upload_samples($module_id, $samples);
-
-// Now let's train the module!
-$res = $ml->classifiers->train($module_id);
+$res = $ml->classifiers->upload_data($model_id, $data);
 
 // Classify some texts
-$res = $ml->classifiers->classify($module_id, ['I love the movie', 'I hate the movie'], true);
+$res = $ml->classifiers->classify($model_id, ['I love the movie', 'I hate the movie']);
 var_dump($res->result);
 ```
 
-You can also use the sdk with extractors and pipelines:
-    
+You can also use the sdk with extractors:
+
 ```php
 require 'autoload.php';
 
 $ml = new MonkeyLearn\Client('<YOUR API KEY HERE>');
-$res = $ml->extractors->extract('<Extractor ID>', ['Some text for the extractor.']);
-$res = $ml->pipelines->run('<Pipeline ID>', {'input':[{'text': 'some text for the pipeline.'}]}, false);
+$res = $ml->extractors->extract('<Extractor ID>', ['Some text to extract.']);
 ```

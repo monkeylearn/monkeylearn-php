@@ -10,138 +10,91 @@ class Classification extends SleepRequests {
     function __construct($token, $base_endpoint) {
         $this->token = $token;
         $this->endpoint = $base_endpoint.'classifiers/';
-        $this->categories = new Categories($token, $base_endpoint);
+        $this->tags = new Tags($token, $base_endpoint);
     }
 
-    function classify($module_id, $sample_list, $sandbox=false,
+    function classify($model_id, $data, $production_model=false,
                       $batch_size=Config::DEFAULT_BATCH_SIZE, $sleep_if_throttled=true) {
-        HandleErrors::check_batch_limits($sample_list, $batch_size);
-        $url = $this->endpoint.$module_id.'/classify/';
-        if ($sandbox) {
-            $url .= '?sandbox=1';
-        }
+        HandleErrors::check_batch_limits($data, $batch_size);
+        $url = $this->endpoint.$model_id.'/classify/';
 
         $res = array();
         $headers = array();
-        $batches = array_chunk($sample_list, $batch_size);
+        $batches = array_chunk($data, $batch_size);
         foreach($batches as $batch) {
-            if (is_array($batch[0])) {
-                $data = array('sample_list' => $batch);
-            } else {
-                $data = array('text_list' => $batch);
-            }
-         try{
-            list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
-         } catch (\MonkeyLearnException $mle){ throw $mle;}
+            $data_dict = array('data' => $batch);
+            $data_dict['production_model'] = $production_model;
+            try {
+                list($response, $header) = $this->make_request($url, 'POST', $data_dict, $sleep_if_throttled);
+            } catch (\MonkeyLearnException $mle){ throw $mle;}
             $headers[] = $header;
-            $res = array_merge($res, $response['result']);
+            $res = array_merge($res, $response);
         }
 
         return new MonkeyLearnResponse($res, $headers);
     }
 
-    function list_classifiers($sleep_if_throttled=true) {
-        $url = $this->endpoint;
-        try{
-            list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
-        } catch (\MonkeyLearnException $mle){ throw $mle;}
-        return new MonkeyLearnResponse($response['result'], array($header));
+    function list($page=null, $per_page=null, $order_by=null, $sleep_if_throttled=true) {
+        $query_params = http_build_query(
+            array('page' => $page, 'per_page' => $per_page, 'order_by' => $order_by)
+        );
+        $url = $this->endpoint.'?'.$query_params;
+        list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
     }
 
-    function detail($module_id, $sleep_if_throttled=true) {
-        $url = $this->endpoint.$module_id;
-        try{
-            list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
-        } catch (\MonkeyLearnException $mle){ throw $mle;}
-        return new MonkeyLearnResponse($response['result'], array($header));
+    function detail($model_id, $sleep_if_throttled=true) {
+        $url = $this->endpoint.$model_id.'/';
+        list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
     }
 
-    function upload_samples($module_id, $samples_with_categories, $sleep_if_throttled=true,
-                            $features_schema=null) {
-        $url = $this->endpoint.$module_id.'/samples/';
-        $data_samples = array();
-        foreach($samples_with_categories as $i => $sc) {
-            if (is_array($sc[0])) {
-                $sample = array("features" => $sc[0]);
-            } else {
-                $sample = array("text" => $sc[0]);
-            }
-
-            if (is_int($sc[1]) || (is_array($sc[1]) && $sc[1] == array_filter($sc[1], 'is_int'))) {
-                $sample['category_id'] = $sc[1];
-            } else if (is_string($sc[1]) || (is_array($sc[1]) && $sc[1] == array_filter($sc[1], 'is_string'))) {
-                $sample['category_path'] = $sc[1];
-            } else if (!is_null($sc[1])){
-                throw new MonkeyLearnException(
-                    "Invalid category value in sample $i"
-                );
-            }
-
-            if (count($sc) > 2 && $sc[2] && (is_string($sc[2]) || (is_array($sc[2]) && $sc[2] == array_filter($sc[2], 'is_string')))) {
-                $sample['tag'] = $sc[2];
-            }
-            $data_samples[] = $sample;
-        }
-        $data = array('samples' => $data_samples);
-        if ($features_schema) {
-            $data['features_schema'] = $features_schema;
-        }
-        try {
-            list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
-            } catch (\MonkeyLearnException $mle){ throw $mle;}
-        return new MonkeyLearnResponse($response['result'], array($header));
+    function upload_data($model_id, $data, $sleep_if_throttled=true) {
+        $url = $this->endpoint.$model_id.'/data/';
+        $data = array('data' => $data);
+        list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
     }
 
-    function train($module_id, $sleep_if_throttled=true) {
-        $url = $this->endpoint.$module_id.'/train/';
-        try{
-            list($response, $header) = $this->make_request($url, 'POST', null, $sleep_if_throttled);
-        } catch (\MonkeyLearnException $mle){ throw $mle;}
-        return new MonkeyLearnResponse($response['result'], array($header));
+    function train($model_id, $sleep_if_throttled=true) {
+        $url = $this->endpoint.$model_id.'/train/';
+        list($response, $header) = $this->make_request($url, 'POST', null, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
     }
 
-    function deploy($module_id, $sleep_if_throttled=true) {
-        $url = $this->endpoint.$module_id.'/deploy/';
-        try{
-            list($response, $header) = $this->make_request($url, 'POST', null, $sleep_if_throttled);
-        } catch (\MonkeyLearnException $mle){ throw $mle;}
-        return new MonkeyLearnResponse($response['result'], array($header));
+    function deploy($model_id, $sleep_if_throttled=true) {
+        $url = $this->endpoint.$model_id.'/deploy/';
+        list($response, $header) = $this->make_request($url, 'POST', null, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
     }
 
-    function delete($module_id, $sleep_if_throttled=true) {
-        $url = $this->endpoint.$module_id;
-        try{
-            list($response, $header) = $this->make_request($url, 'DELETE', null, $sleep_if_throttled);
-        } catch (\MonkeyLearnException $mle){ throw $mle;}
-        return new MonkeyLearnResponse($response['result'], array($header));
+    function delete($model_id, $sleep_if_throttled=true) {
+        $url = $this->endpoint.$model_id.'/';
+        list($response, $header) = $this->make_request($url, 'DELETE', null, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
     }
 
-    function create($name, $description=null, $train_state=null, $language=null, $ngram_range=null,
-               $use_stemmer=null, $stop_words=null, $max_features=null, $strip_stopwords=null,
-               $is_multilabel=null, $is_twitter_data=null, $normalize_weights=null,
-               $classifier=null, $industry=null, $classifier_type=null,
-               $text_type=null, $permissions=null, $sleep_if_throttled=true) {
+    function create($name, $description=null, $algorithm=null, $language=null, $max_features=null,
+               $ngram_range=null, $use_stemming=null, $preprocess_numbers=null,
+               $preprocess_social_media=null, $normalize_weights=null, $stopwords=null,
+               $whitelist=null, $sleep_if_throttled=true) {
 
         $data = array(
             'name' => $name,
             'description' => $description,
-            'train_state' => $train_state,
+            'algorithm' => $algorithm,
             'language' => $language,
-            'ngram_range' => $ngram_range,
-            'use_stemmer' => $use_stemmer,
-            'stop_words' => $stop_words,
             'max_features' => $max_features,
-            'strip_stopwords' => $strip_stopwords,
-            'is_multilabel' => $is_multilabel,
-            'is_twitter_data' => $is_twitter_data,
+            'ngram_range' => $ngram_range,
+            'use_stemming' => $use_stemming,
+            'preprocess_numbers' => $preprocess_numbers,
+            'preprocess_social_media' => $preprocess_social_media,
             'normalize_weights' => $normalize_weights,
-            'classifier' => $classifier,
-            'industry' => $industry,
-            'classifier_type' => $classifier_type,
-            'text_type' => $text_type,
-            'permissions' => $permissions,
+            'stopwords' => $stopwords,
+            'whitelist' => $whitelist,
         );
 
+        // remove null values
         foreach($data as $key => $val) {
             if (!$val) {
                 unset($data[$key]);
@@ -149,47 +102,97 @@ class Classification extends SleepRequests {
         }
 
         $url = $this->endpoint;
-        try{
-            list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
-        } catch (\MonkeyLearnException $mle){ throw $mle;}
-        return new MonkeyLearnResponse($response['result'], array($header));
+        list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
+    }
+
+    function edit($model_id, $name=null, $description=null, $algorithm=null, $language=null,
+               $max_features=null, $ngram_range=null, $use_stemming=null, $preprocess_numbers=null,
+               $preprocess_social_media=null, $normalize_weights=null, $stopwords=null,
+               $whitelist=null, $sleep_if_throttled=true) {
+
+        $data = array(
+            'name' => $name,
+            'description' => $description,
+            'algorithm' => $algorithm,
+            'language' => $language,
+            'max_features' => $max_features,
+            'ngram_range' => $ngram_range,
+            'use_stemming' => $use_stemming,
+            'preprocess_numbers' => $preprocess_numbers,
+            'preprocess_social_media' => $preprocess_social_media,
+            'normalize_weights' => $normalize_weights,
+            'stopwords' => $stopwords,
+            'whitelist' => $whitelist,
+        );
+
+        // remove null values
+        foreach($data as $key => $val) {
+            if (!$val) {
+                unset($data[$key]);
+            }
+        }
+
+        $url = $this->endpoint.$model_id.'/';
+        list($response, $header) = $this->make_request($url, 'PATCH', $data, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
     }
 }
 
-class Categories extends SleepRequests {
+class Tags extends SleepRequests {
     function __construct($token, $base_endpoint) {
         $this->token = $token;
         $this->endpoint = $base_endpoint.'classifiers/';
     }
 
-    function detail($module_id, $category_id, $sleep_if_throttled=true) {
-        $url = $this->endpoint.$module_id.'/categories/'.$category_id.'/';
-        try{
-            list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
-        } catch (\MonkeyLearnException $mle){ throw $mle;}
-        return new MonkeyLearnResponse($response['result'], array($header));
+    function detail($model_id, $tag_id, $sleep_if_throttled=true) {
+        $url = $this->endpoint.$model_id.'/tags/'.$tag_id.'/';
+        list($response, $header) = $this->make_request($url, 'GET', null, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
     }
 
-    function create($module_id, $name, $parent_id, $sleep_if_throttled=true) {
+    function create($model_id, $name, $parent_id=null, $sleep_if_throttled=true) {
 
         $data = array(
             'name' => $name,
             'parent_id' => $parent_id,
         );
 
-        $url = $this->endpoint.$module_id.'/categories/';
-        try{
-            list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
-        } catch (\MonkeyLearnException $mle){ throw $mle;}
-        return new MonkeyLearnResponse($response['result'], array($header));
+        // remove null values
+        foreach($data as $key => $val) {
+            if (!$val) {
+                unset($data[$key]);
+            }
+        }
+
+        $url = $this->endpoint.$model_id.'/tags/';
+        list($response, $header) = $this->make_request($url, 'POST', $data, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
     }
 
-    function edit($module_id, $category_id, $name=null, $parent_id=null,
-                  $sleep_if_throttled=true) {
+    function edit($model_id, $tag_id, $name=null, $parent_id=null, $sleep_if_throttled=true) {
 
         $data = array(
             'name' => $name,
             'parent_id' => $parent_id,
+        );
+
+        // remove null values
+        foreach($data as $key => $val) {
+            if (!$val) {
+                unset($data[$key]);
+            }
+        }
+
+        $url = $this->endpoint.$model_id.'/tags/'.$tag_id.'/';
+        list($response, $header) = $this->make_request($url, 'PATCH', $data, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
+    }
+
+    function delete($model_id, $tag_id, $move_data_to=null, $sleep_if_throttled=true) {
+
+        $data = array(
+            'move_data_to' => $move_data_to
         );
 
         foreach($data as $key => $val) {
@@ -198,32 +201,9 @@ class Categories extends SleepRequests {
             }
         }
 
-        $url = $this->endpoint.$module_id.'/categories/'.$category_id.'/';
-        try{
-            list($response, $header) = $this->make_request($url, 'PATCH', $data, $sleep_if_throttled);
-        } catch (\MonkeyLearnException $mle){ throw $mle;}
-        return new MonkeyLearnResponse($response['result'], array($header));
-    }
-
-    function delete($module_id, $category_id, $samples_strategy=null,
-                    $samples_category_id=null, $sleep_if_throttled=true) {
-
-        $data = array(
-            'samples-strategy' => $samples_strategy,
-            'samples-category-id' => $samples_category_id,
-        );
-
-        foreach($data as $key => $val) {
-            if (!$val) {
-                unset($data[$key]);
-            }
-        }
-
-        $url = $this->endpoint.$module_id.'/categories/'.$category_id.'/';
-        try{
-            list($response, $header) = $this->make_request($url, 'DELETE', $data, $sleep_if_throttled);
-        } catch (\MonkeyLearnException $mle){ throw $mle;}            
-        return new MonkeyLearnResponse($response['result'], array($header));
+        $url = $this->endpoint.$model_id.'/tags/'.$tag_id.'/';
+        list($response, $header) = $this->make_request($url, 'DELETE', $data, $sleep_if_throttled);
+        return new MonkeyLearnResponse($response, array($header));
     }
 }
 ?>

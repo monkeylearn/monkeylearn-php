@@ -4,7 +4,6 @@ namespace MonkeyLearn;
 use MonkeyLearn\Config;
 use MonkeyLearn\Classification;
 use MonkeyLearn\Extraction;
-use MonkeyLearn\Pipelines;
 
 class Client {
 
@@ -12,7 +11,6 @@ class Client {
         $this->token = $token;
         $this->classifiers = new Classification($token, $base_endpoint);
         $this->extractors = new Extraction($token, $base_endpoint);
-        $this->pipelines = new Pipelines($token, $base_endpoint);
     }
 
 }
